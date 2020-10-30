@@ -30,4 +30,5 @@ public class DynamoDBConfig {
         return new DynamoDBMapper(client, DynamoDBMapperConfig.DEFAULT);
     }
 
+
 }

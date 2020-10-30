@@ -4,6 +4,16 @@ public class Mensaje {
     private String tipoMensaje;
     private Evento evento;
 
+    public String getResultado() {
+        return resultado;
+    }
+
+    public void setResultado(String resultado) {
+        this.resultado = resultado;
+    }
+
+    private String resultado;
+
     public String getTipoMensaje() {
         return tipoMensaje;
     }

@@ -3,6 +3,7 @@ package com.personal.agenda;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.sqs.model.Message;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class SqsService {
@@ -46,11 +49,48 @@ public class SqsService {
         System.out.println("Received message= " + message);
 
         Mensaje mensaje = objectMapper.readValue(message, Mensaje.class);
+        String retornable;
         System.out.println(mensaje.toString());
+        try {
+            switch (mensaje.getTipoMensaje()) {
+                case "Create":
+
+                    dynamoDBMapper.save(mensaje.getEvento());
+                    System.out.println("Guardado");
+                    break;
+                case "Retrieve":
+                    if (mensaje.getEvento().getId() != null) {
+                        Evento event = dynamoDBMapper.load(Evento.class, mensaje.getEvento().getId());
+                        System.out.println("Retrieved" + event);
+                    }
+                    break;
+                case "Update":
+                    if (mensaje.getEvento().getId() != null) {
+                        dynamoDBMapper.save(mensaje.getEvento());
+                        System.out.println("Actualizado");
+                    }
+                    break;
+                case "Delete":
+                    if (mensaje.getEvento().getId() != null) {
+                        dynamoDBMapper.delete(mensaje.getEvento());
+                        System.out.println("Borrado");
+                    }
+                    break;
+                default:
+                    throw new Exception("No se pude realizar ninguna accion con ese mensaje");
+            }
+            mensaje.setResultado("Success");
 
 
-        dynamoDBMapper.save(mensaje.getEvento());
+        } catch (Exception exception) {
+            mensaje.setResultado("Fail");
+        }
+        retornable = objectMapper.writeValueAsString(mensaje);
+        System.out.println(retornable);
+
+        Map<String, Object> headers = new HashMap<>();
+        headers.put("message-group-id", "G2");
+        queueMessagingTemplate.convertAndSend(QUEUE_RESPONSE, retornable, headers);
     }
-
-
 }
+

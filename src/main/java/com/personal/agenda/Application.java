@@ -1,16 +1,9 @@
 package com.personal.agenda;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import org.joda.time.DateTime;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.aws.messaging.core.QueueMessagingTemplate;
 import org.springframework.context.ConfigurableApplicationContext;
-import software.amazon.ion.Timestamp;
-
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 @SpringBootApplication
 public class Application {

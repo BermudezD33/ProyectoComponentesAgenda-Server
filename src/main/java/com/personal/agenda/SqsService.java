@@ -1,7 +1,8 @@
 package com.personal.agenda;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.sqs.model.Message;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +13,9 @@ import org.springframework.cloud.aws.messaging.listener.annotation.SqsListener;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -31,9 +34,12 @@ public class SqsService {
     @Autowired
     private DynamoDBMapper dynamoDBMapper;
 
-    public void sendMessageToSqs(final Message message) {
+    public void sendMessageToSqs(String message) {
         System.out.println("Sending the message to the Amazon sqs.");
-        queueMessagingTemplate.convertAndSend(QUEUE_RESPONSE, message);
+        Map<String, Object> headers = new HashMap<>();
+        headers.put("message-group-id", "G1");
+        headers.put("message-deduplication-id", String.valueOf(new Date().getTime()));
+        queueMessagingTemplate.convertAndSend(QUEUE_RESPONSE, message, headers);
         System.out.println("Message sent successfully to the Amazon sqs.");
     }
 
@@ -55,6 +61,19 @@ public class SqsService {
                     if (mensaje.getEvento().getId() != null) {
                         Evento event = dynamoDBMapper.load(Evento.class, mensaje.getEvento().getId());
                         System.out.println("Retrieved" + event);
+                    }
+                    break;
+                case "RetrieveByDay":
+                    if (mensaje.getEvento() != null) {
+                        Map<String, AttributeValue> eav = new HashMap<>();
+                        eav.put(":fechaIni", new AttributeValue().withN("0"));
+                        eav.put(":fechaFin", new AttributeValue().withN(String.valueOf(new Date().getTime())));
+                        DynamoDBScanExpression scanExpression =
+                                new DynamoDBScanExpression()
+                                    .withFilterExpression("Fecha BETWEEN :fechaIni AND :fechaFin")
+                                    .withExpressionAttributeValues(eav);
+                        List<Evento> eventos = dynamoDBMapper.scan(Evento.class, scanExpression);
+                        mensaje.setEventos(eventos);
                     }
                     break;
                 case "Update":
@@ -81,9 +100,6 @@ public class SqsService {
         retornable = objectMapper.writeValueAsString(mensaje);
         System.out.println(retornable);
 
-        Map<String, Object> headers = new HashMap<>();
-        headers.put("message-group-id", "G2");
-        queueMessagingTemplate.convertAndSend(QUEUE_RESPONSE, retornable, headers);
+        this.sendMessageToSqs(retornable);
     }
 }
-

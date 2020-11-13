@@ -13,10 +13,7 @@ import org.springframework.cloud.aws.messaging.listener.annotation.SqsListener;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class SqsService {
@@ -66,13 +63,23 @@ public class SqsService {
                 case "RetrieveByDay":
                     if (mensaje.getEvento() != null) {
                         Map<String, AttributeValue> eav = new HashMap<>();
-                        eav.put(":fechaIni", new AttributeValue().withN("0"));
-                        eav.put(":fechaFin", new AttributeValue().withN(String.valueOf(new Date().getTime())));
+                        eav.put(":fechaIni", new AttributeValue().withN(String.valueOf(mensaje.getEvento().getFecha())));
+                        Date date = new Date(mensaje.getEvento().getFecha());
+                        Calendar c = Calendar.getInstance();
+                        c.setTime(date);
+                        c.add(Calendar.DATE, 1);
+                        date = c.getTime();
+                        String newDate = String.valueOf(date.getTime());
+                        System.out.println(newDate);
+                        eav.put(":fechaFin", new AttributeValue().withN(String.valueOf(date.getTime())));
                         DynamoDBScanExpression scanExpression =
                                 new DynamoDBScanExpression()
-                                    .withFilterExpression("Fecha BETWEEN :fechaIni AND :fechaFin")
-                                    .withExpressionAttributeValues(eav);
+                                        .withFilterExpression("Fecha BETWEEN :fechaIni AND :fechaFin")
+                                        .withExpressionAttributeValues(eav);
+
                         List<Evento> eventos = dynamoDBMapper.scan(Evento.class, scanExpression);
+                        eventos = new ArrayList<>(eventos);
+                        Collections.sort(eventos, Comparator.comparing(Evento::getFecha));
                         mensaje.setEventos(eventos);
                     }
                     break;

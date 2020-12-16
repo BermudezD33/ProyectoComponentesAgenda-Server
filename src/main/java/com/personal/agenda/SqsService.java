@@ -50,13 +50,13 @@ public class SqsService {
         try {
             switch (mensaje.getTipoMensaje()) {
                 case "Create":
-
                     dynamoDBMapper.save(mensaje.getEvento());
                     System.out.println("Guardado");
                     break;
                 case "Retrieve":
                     if (mensaje.getEvento().getId() != null) {
                         Evento event = dynamoDBMapper.load(Evento.class, mensaje.getEvento().getId());
+                        mensaje.setEvento(event);
                         System.out.println("Retrieved" + event);
                     }
                     break;
